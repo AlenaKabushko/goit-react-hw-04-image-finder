@@ -1,70 +1,96 @@
 import { Component } from 'react';
-import ContactList from './Contacts/Contacts';
-import { Form } from './Form/Form';
-import Filter from './Filter/Filter';
+import { Box } from './Box';
+import Button from './Button/Button';
+import ImageGallery from './ImageGallery/ImageGallery';
+import Loader from './Loader/Loader';
+import RequestImg from './Request/Request';
+import Searchbar from './Searchbar/Searchbar';
 import { Notify } from 'notiflix';
 
+let page = 1;
 export class App extends Component {
-  state = {
-    contacts: [
-      // { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      // { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      // { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      // { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
+    state = {
+        search: '',
+        images: [],
+        totalHits: 0,
+        loading: Boolean,
+    };
 
-  componentDidMount() {
-    const contactsFromLocal = localStorage.getItem('contacts');
-    const parseContactsFromLocal = JSON.parse(contactsFromLocal);
-    if (parseContactsFromLocal) {
-      this.setState({ contacts: parseContactsFromLocal });
+    onSubmit = async search => {
+        page = 1;
+        this.setState({
+            loading: true,
+        });
+        try {
+            const { totalHits, hits } = await RequestImg(search, page);
+
+            if (hits.length === 0) {
+                Notify.failure('we could not find anything, please try again');
+            }
+
+            this.setState({
+                images: hits,
+                totalHits: totalHits,
+                search: search,
+                loading: false,
+            });
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    onClick = async () => {
+        this.setState({
+            loading: true,
+        });
+        try {
+            const { hits } = await RequestImg(this.state.search, (page += 1));
+
+            this.setState(prevState => ({
+                images: [...prevState.images, ...hits],
+                loading: false,
+            }));
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    render() {
+        const { images, loading, totalHits } = this.state;
+
+        let visual = '';
+        if (loading === true) {
+            visual = (
+                <>
+                    <ImageGallery images={images} />
+                    <Loader />
+                </>
+            );
+        } else if (loading === false && images.length !== totalHits) {
+            visual = (
+                <>
+                    <ImageGallery images={images} />
+                    <Button onClick={this.onClick} />
+                </>
+            );
+        } else if (images.length === totalHits) {
+            visual = (
+                <>
+                    <ImageGallery images={images} />
+                </>
+            );
+        }
+
+        return (
+            <Box
+                display="grid"
+                gridTemplateColumns="1fr"
+                gridGap="16px"
+                pb="24px"
+            >
+                <Searchbar onSubmit={this.onSubmit} />
+                {visual}
+            </Box>
+        );
     }
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
-
-  formData = data => {
-    if (this.state.contacts.find(contact => contact.name === data.name)) {
-      Notify.warning(`${data.name} is already in contacts`);
-      return false;
-    }
-    this.setState(prevState => ({
-      contacts: [data, ...prevState.contacts],
-    }));
-    return true;
-  };
-
-  deleteContacts = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
-  };
-
-  onFilterChange = value => {
-    this.setState({ filter: value });
-  };
-
-  render() {
-    let fromFilter = this.state.contacts;
-    if (this.state.filter) {
-      fromFilter = this.state.contacts.filter(({ name }) => {
-        return name.toLowerCase().includes(this.state.filter.toLowerCase());
-      });
-    }
-    return (
-      <section style={{ marginLeft: '40px' }}>
-        <h1>Phonebook</h1>
-        <Form formData={this.formData} />
-        <h2>Contacts</h2>
-        <Filter onChange={this.onFilterChange} />
-        <ContactList allContacts={fromFilter} onDelete={this.deleteContacts} />
-      </section>
-    );
-  }
 }
