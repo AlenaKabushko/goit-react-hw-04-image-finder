@@ -26,7 +26,7 @@ function Searchbar({ onSubmit }) {
                         className="input"
                         name="search"
                         type="text"
-                        autoComplete="off"
+                        autoComplete="on"
                         autoFocus
                         placeholder="Search images and photos"
                     />
