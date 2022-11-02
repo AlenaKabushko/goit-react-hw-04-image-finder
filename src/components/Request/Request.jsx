@@ -1,5 +1,4 @@
 import axios from 'axios';
-//import { useState } from 'react';
 
 axios.defaults.baseURL = 'https://pixabay.com/api/';
 const API_KEY = '29758121-e6e3453f02405b4aa1525a8f6';
