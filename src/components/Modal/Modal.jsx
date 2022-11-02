@@ -1,11 +1,20 @@
 import { createPortal } from 'react-dom';
 import { OverlayStyled, ModalStyled } from './Modal.styled';
 import PropTypes from 'prop-types';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 const modalRoot = document.querySelector('#modal-root');
 function Modal({ forModal, onClose }) {
     const { largeImageURL, tags } = forModal;
+
+    const keyDown = useCallback(
+        e => {
+            if (e.code === 'Escape') {
+                onClose();
+            }
+        },
+        [onClose]
+    );
 
     useEffect(() => {
         window.addEventListener('keydown', keyDown);
@@ -13,13 +22,7 @@ function Modal({ forModal, onClose }) {
         return () => {
             window.removeEventListener('keydown', keyDown);
         };
-    });
-
-    const keyDown = e => {
-        if (e.code === 'Escape') {
-            onClose();
-        }
-    };
+    }, [keyDown]);
 
     const backdropClick = e => {
         if (e.currentTarget === e.target) {
