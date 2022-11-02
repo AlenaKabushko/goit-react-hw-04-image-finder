@@ -16,6 +16,15 @@ function Modal({ forModal, onClose }) {
         [onClose]
     );
 
+    const backdropClick = useCallback(
+        e => {
+            if (e.currentTarget === e.target) {
+                onClose();
+            }
+        },
+        [onClose]
+    );
+
     useEffect(() => {
         window.addEventListener('keydown', keyDown);
 
@@ -23,12 +32,6 @@ function Modal({ forModal, onClose }) {
             window.removeEventListener('keydown', keyDown);
         };
     }, [keyDown]);
-
-    const backdropClick = e => {
-        if (e.currentTarget === e.target) {
-            onClose();
-        }
-    };
 
     return createPortal(
         <OverlayStyled onClick={backdropClick}>
