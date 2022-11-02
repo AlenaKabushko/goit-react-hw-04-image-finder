@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box } from './Box';
 import Button from './Button/Button';
 import ImageGallery from './ImageGallery/ImageGallery';
@@ -8,46 +8,61 @@ import Searchbar from './Searchbar/Searchbar';
 import { Notify } from 'notiflix';
 
 export function App() {
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(null);
     const [images, setImages] = useState([]);
     const [totalHits, setTotalHits] = useState(0);
     const [loading, setLoading] = useState(Boolean);
     const [page, setPage] = useState(1);
+    // const [buttonMore, setButtonMore] = useState(false);
 
-    const onSubmit = async search => {
+    // const memoizedTotalHits = useCallback(() => {
+    //     setTotalHits(totalHits);
+    //     setButtonMore(images.length === totalHits);
+    // }, [totalHits]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        if (!search) {
+            return;
+        }
+
         setLoading(true);
-        try {
-            const { totalHits, hits } = await RequestImg(search, page);
-
+        RequestImg(search, page).then(response => {
+            const { hits, totalHits } = response;
             if (hits.length === 0) {
-                Notify.failure('we could not find anything, please try again');
+                setLoading(false);
+                return Notify.failure(
+                    'we could not find anything, please try again'
+                );
             }
 
-            setImages(hits);
+            setImages(prevState => [...prevState, ...hits]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             setTotalHits(totalHits);
-            setSearch(search);
+            // memoizedTotalHits();
             setLoading(false);
-        } catch (error) {
-            console.log(error);
+        });
+        return () => {
+            controller.abort();
+        };
+    }, [search, page]);
+
+    // useEffect(() => {
+    //     setButtonMore(images.length === totalHits);
+    // }, [images.length, totalHits]);
+
+    const onNewSubmit = input => {
+        if (!input) {
+            return;
         }
+        setPage(1);
+        setImages([]);
+        return setSearch(input);
     };
 
-    const onLoadMoreClick = async () => {
-        setLoading(true);
-        setPage(prevState => prevState + 1);
-        console.log(page);
-        try {
-            const { hits } = await RequestImg(search, page);
-
-            setImages([...images, ...hits]);
-            setLoading(false);
-        } catch (error) {
-            console.log(error);
-        }
+    const onLoadMore = () => {
+        return setPage(prevState => prevState + 1);
     };
-
-    // render() {
-    // const { images, loading, totalHits } = this.state;
 
     let visual = '';
     if (loading === true) {
@@ -61,7 +76,8 @@ export function App() {
         visual = (
             <>
                 <ImageGallery images={images} />
-                <Button onClick={onLoadMoreClick} />
+                {/* {buttonMore && <Button onClick={onLoadMore} />} */}
+                <Button onClick={onLoadMore} />
             </>
         );
     } else if (images.length === totalHits) {
@@ -74,96 +90,8 @@ export function App() {
 
     return (
         <Box display="grid" gridTemplateColumns="1fr" gridGap="16px" pb="24px">
-            <Searchbar onSubmit={onSubmit} />
+            <Searchbar onSubmit={onNewSubmit} />
             {visual}
         </Box>
     );
 }
-
-//===========================
-// export class App extends Component {
-//     state = {
-//         search: '',
-//         images: [],
-//         totalHits: 0,
-//         loading: Boolean,
-//     };
-
-//     onSubmit = async search => {
-//         page = 1;
-//         this.setState({
-//             loading: true,
-//         });
-//         try {
-//             const { totalHits, hits } = await RequestImg(search, page);
-
-//             if (hits.length === 0) {
-//                 Notify.failure('we could not find anything, please try again');
-//             }
-
-//             this.setState({
-//                 images: hits,
-//                 totalHits: totalHits,
-//                 search: search,
-//                 loading: false,
-//             });
-//         } catch (error) {
-//             console.log(error);
-//         }
-//     };
-
-//     onClick = async () => {
-//         this.setState({
-//             loading: true,
-//         });
-//         try {
-//             const { hits } = await RequestImg(this.state.search, (page += 1));
-
-//             this.setState(prevState => ({
-//                 images: [...prevState.images, ...hits],
-//                 loading: false,
-//             }));
-//         } catch (error) {
-//             console.log(error);
-//         }
-//     };
-
-//     render() {
-//         const { images, loading, totalHits } = this.state;
-
-//         let visual = '';
-//         if (loading === true) {
-//             visual = (
-//                 <>
-//                     <ImageGallery images={images} />
-//                     <Loader />
-//                 </>
-//             );
-//         } else if (loading === false && images.length !== totalHits) {
-//             visual = (
-//                 <>
-//                     <ImageGallery images={images} />
-//                     <Button onClick={this.onClick} />
-//                 </>
-//             );
-//         } else if (images.length === totalHits) {
-//             visual = (
-//                 <>
-//                     <ImageGallery images={images} />
-//                 </>
-//             );
-//         }
-
-//         return (
-//             <Box
-//                 display="grid"
-//                 gridTemplateColumns="1fr"
-//                 gridGap="16px"
-//                 pb="24px"
-//             >
-//                 <Searchbar onSubmit={this.onSubmit} />
-//                 {visual}
-//             </Box>
-//         );
-//     }
-// }
